@@ -46,12 +46,12 @@ class   InvertedIndex():
 	def	load(self):
 		try:
 			with open("cache/index.pkl", "rb") as f:
-				self.docmap =  pickle.load(f)
+				self.index =  pickle.load(f)
 		except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
 			print("Error load file: cache/index.pkl", e)
 
 		try:
-			with open("cache/index.pkl", "rb") as f:
-				self.index = pickle.load()
+			with open("cache/docmap.pkl", "rb") as f:
+				self.docmap = pickle.load(f)
 		except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
 			print("Error load file: cache/index.pkl", e)
