@@ -6,7 +6,7 @@ from pathlib import Path
 from InvertedIndex import InvertedIndex
 
 def search_movies(cinema, query):
-    #count = 1
+    count = 1
     move_list = []
     idx = InvertedIndex()
     idx.load()
@@ -15,14 +15,12 @@ def search_movies(cinema, query):
     for query_token in query_tokens:
         doc_ids = idx.get_documents(query_token)
         for doc_id in doc_ids:
+            if count >= 5:
+                break
             doc = idx.docmap[doc_id]
-            print(doc['title'])
-        #print(query_token + ": index of doc: ", doc_id)
-        # match = any(q in t for q in query_tokens for t in title_tokens)
-        # if match :
-        #     move_list.append(title_tokens)
-        #     print(f"{count}. {move['title']}")
-        #     count += 1
+            move_list.append(doc)
+            print(f"{doc['title']} {doc['id']}")
+            count += 1
     return (move_list)
 
 
