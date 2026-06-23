@@ -1,5 +1,6 @@
 
 import os
+import math
 import pickle
 from collections import Counter
 from utils import process_token
@@ -13,26 +14,28 @@ class   InvertedIndex():
 		self.index = {}
 		self.docmap = {}
 		self.term_frequencies = {}
+		self.total_doc_count = 0
 
 	def __add_document(self, doc_id, text):
 		tokens = process_token(text, stopwords)
 
 		if doc_id not in self.term_frequencies:
 			self.term_frequencies[doc_id] = Counter()
+			self.total_doc_count += 1
 		
 		for token in tokens:
 			if token not in self.index:
 				self.index[token] = set()
 			self.index[token].add(doc_id)
 		
-		self.term_frequencies[doc_id][token] += 1
+			self.term_frequencies[doc_id][token] += 1
 
 	def get_documents(self, term):
 		docs_ids = self.index.get(term, set())
 		return sorted(docs_ids)
 
 	def	get_tf(self, doc_id, term):
-		return (self.term_frequencies.get(doc_id, 0).get(term, 0))
+		return (self.term_frequencies[doc_id][term])
 
 	def	build(self):
 		cinema = load_movies()
@@ -46,8 +49,23 @@ class   InvertedIndex():
 			self.__add_document(doc_id, text)
 
 
+	def	get_bm25_idf(self, term: str) ->float:
+		docs_term_count = len(self.get_documents(term))
+
+		docs_without_term = self.total_doc_count - docs_term_count + 0.5
+		docs_with_term = docs_term_count + 0.5
+		mb25 = math.log((docs_without_term / docs_with_term) + 1)
+		return (mb25)
+
+
+def	
+
+
 	def	save(self):
 		os.makedirs("cache", exist_ok=True)
+
+		with open("cache/total_doc_count.pkl", "wb") as f:
+			pickle.dump(self.total_doc_count, f)
 
 		with open("cache/index.pkl", "wb") as f:
 			pickle.dump(self.index, f)
@@ -77,3 +95,9 @@ class   InvertedIndex():
 				self.term_frequencies = pickle.load(f)
 		except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
 			print("Error load file: cache/index.pkl", e)
+
+		try:
+			with open("cache/total_doc_count.pkl", "rb") as f:
+				self.total_doc_count = pickle.load(f)
+		except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
+			print("Error load file: cache/total_doc_count.pkl", e)
