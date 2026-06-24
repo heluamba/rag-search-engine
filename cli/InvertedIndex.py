@@ -4,21 +4,32 @@ import math
 import pickle
 from collections import Counter
 from utils import process_token
+from utils import process_token_stemmer
 from utils import load_movies
 from utils import load_stopwords
 from utils import stopwords
 
 BM25_K1 = 1.5
+BM25_B = 0.75
+CACHE_DIR = "cache/"
 
 class   InvertedIndex():
 	def __init__(self):
 		self.index = {}
 		self.docmap = {}
+		self.doc_lengths = {}
 		self.term_frequencies = {}
 		self.total_doc_count = 0
+		self.lengths_path = os.path.join(CACHE_DIR, "doc_lengths.pkl")
+
 
 	def __add_document(self, doc_id, text):
-		tokens = process_token(text, stopwords)
+		tokens = process_token_stemmer(text, stopwords)
+		
+		if doc_id in self.doc_lengths:
+			self.doc_lengths[doc_id] += len(tokens)
+		else:
+			self.doc_lengths[doc_id] = len(tokens)
 
 		if doc_id not in self.term_frequencies:
 			self.term_frequencies[doc_id] = Counter()
@@ -30,6 +41,15 @@ class   InvertedIndex():
 			self.index[token].add(doc_id)
 		
 			self.term_frequencies[doc_id][token] += 1
+
+	def	__get_avg_doc_length(self) -> float:
+		if self.total_doc_count == 0:
+			return (0)
+		
+		total_doc_length = sum(self.doc_lengths.values())
+		
+		return (total_doc_length / self.total_doc_count)
+
 
 	def get_documents(self, term):
 		docs_ids = self.index.get(term, set())
@@ -49,10 +69,13 @@ class   InvertedIndex():
 		return (mb25)
 
 
-	def	get_bm25_tf_saturated(self, doc_id :int, term :str, k1=BM25_K1):
+	def	get_bm25_tf_saturated(self, doc_id :int, term :str, k1=BM25_K1, b=BM25_B):
 		tf = self.get_tf(doc_id, term)
+
+		avg_doc_length = self.__get_avg_doc_length()
+		length_norm = 1 - b + b * (self.doc_lengths[doc_id] / avg_doc_length)
 		
-		tf_component = (tf * (k1 + 1)) / (tf + k1)
+		tf_component = (tf * (k1 + 1)) / (tf + k1 * length_norm)
 		return (tf_component)
 
 
@@ -85,6 +108,9 @@ class   InvertedIndex():
 		with open("cache/term_frequencies.pkl", "wb") as f:
 			pickle.dump(self.term_frequencies, f)
 
+		with open(self.lengths_path, "wb") as f:
+			pickle.dump(self.doc_lengths, f)
+
 
 	def	load(self):
 		try:
@@ -110,3 +136,9 @@ class   InvertedIndex():
 				self.total_doc_count = pickle.load(f)
 		except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
 			print("Error load file: cache/total_doc_count.pkl", e)
+		
+		try:
+			with open(self.lengths_path, "rb") as f:
+				self.doc_lengths = pickle.load(f)
+		except (FileNotFoundError, pickle.UnpicklingError, EOFError) as e:
+			print(f"Error load file: {self.lengths_path}", e)

@@ -21,10 +21,17 @@ def load_movies():
     return (movies)
 
 
-def process_token(query, stopwords):
+def process_token_stemmer(query, stopwords):
     text = rm_punctuation_upper(query)
     tokens = text.split()
     tokens = [get_word_stemmer(t) for t in tokens if t and t not in stopwords]
+    return (tokens)
+
+
+def process_token(query, stopwords):
+    text = rm_punctuation_upper(query)
+    tokens = text.split()
+    tokens = [t for t in tokens if t and t not in stopwords]
     return (tokens)
 
 def rm_punctuation_upper(text):
