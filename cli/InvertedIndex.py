@@ -78,7 +78,22 @@ class   InvertedIndex():
 		tf_component = (tf * (k1 + 1)) / (tf + k1 * length_norm)
 		return (tf_component)
 
+	def	bm25(self, doc_id, term):
+		return  (self.get_bm25_idf(term) * self.get_bm25_tf_saturated(doc_id, term))
 
+
+	def	bm25_search(self, query :str, limit :int):
+		scores = {}
+		tokens = process_token_stemmer(query, stopwords)
+
+		for token in tokens:
+			docs_id = self.get_documents(token)
+			for doc_id in docs_id:
+				scores[doc_id] = scores.get(doc_id, 0.0) + self.bm25(doc_id, token)
+		src = list(scores.items())
+		ordered = sorted(src, key=lambda item	: item[1], reverse=True)
+		return (ordered[:limit])
+	
 
 	def	build(self):
 		cinema = load_movies()
