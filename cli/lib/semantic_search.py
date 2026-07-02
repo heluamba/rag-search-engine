@@ -1,4 +1,5 @@
 import os
+import re
 import numpy as np
 from utils import load_movies
 from sentence_transformers import SentenceTransformer
@@ -50,6 +51,25 @@ def cosine_similarity(vec1: np.ndarray, vec2: np.ndarray) -> float:
         return 0.0
 
     return dot_product / (norm1 * norm2)
+
+
+def	semantic_chunk(text: str, n: int, overlap: int):
+	sentence = re.split(r"(?<=[.!?])\s+", text)
+
+	chunks = []
+	step = n - overlap
+
+	for i in range(0, len(sentence), step):
+		chunks.append(" ".join(sentence[i:i+n]))
+	
+	print(f"Semantically chunking {len(text)} characters")
+
+	for i, chk in enumerate(chunks, 1):
+		print(f"{i}. {chk}")
+
+	return (chunks)
+
+
 
 #CLASSE
 
@@ -110,7 +130,46 @@ class	SemanticSearch():
 
 		similarity_score.sort(key=lambda x: x[0], reverse=True)
 		return (similarity_score[:limit])
+
+
+class	ChunkedSemanticSearch(SemanticSearch):
+	def	__init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
+		super().__init__(model_name)
+		self.chunk_embeddings = None
+		self.chunk_metadata = []
+
+
+	def	build_chunk_embeddings(self, documents: list[dict]) -> np.ndarray:
+		self.documents = documents
+		self.document_map = {}
+		self.chunk_metadata = []
 		
+		chunk_list = []
+		
+		for doc in documents:
+			self.document_map[doc['id']] = doc
+
+			desc = doc['description']
+			if not isinstance(desc, str) or desc.strip() != "":
+				continue
+
+			chunks = semantic_chunk(desc, 4, 1)
+			
+			for i, chunk in enumerate(chunks):
+				chunk_list.append(chunk)
+				self.chunk_metadata.append(
+				{
+					"movie_idx": doc['id'],
+					"chunk_idx": i,
+					"total_chunks": len(chunks)
+				})
+
+		if not chunk_list:
+			self.chunk_embeddings = np.array([])
+			return self.chunk_embeddings
+
+		self.chunk_embeddings = self.model.encode(chunk_list, show_progress_bar=True)
+
 
 #MODEL FUNC
 
